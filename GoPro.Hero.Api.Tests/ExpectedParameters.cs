@@ -11,5 +11,9 @@ namespace GoPro.Hero.Api.Tests
         public const string PASSWORD = "goprohero";
         public const string IP_ADDRESS = "10.5.5.9";
 
+        public const string TEMP_NAME = "Xan Alpha";
+        public const string REAL_NAME = "Hero3-Black";
+
+        public const VideoStandard DEFAULT_VIDEO = VideoStandard.Ntsc;
     }
 }

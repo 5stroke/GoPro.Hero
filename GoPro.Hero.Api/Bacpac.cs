@@ -10,63 +10,91 @@ using System.IO;
 
 namespace GoPro.Hero.Api
 {
-    public class Bacpac
+    public sealed class Bacpac
     {
+        private BacpacInformation _information;
+        private BacpacStatus _status;
+
         public string Password { get; private set; }
         public string Address { get; private set; }
 
-        public BacpacInformation Information { get; private set; }
-        public BacpacStatus Status { get; private set; }
-
-        public void UpdatePassword()
+        public BacpacInformation Information
         {
-            var request = this.CreateCommand<CommandRetrievePassword>();
+            get
+            {
+                this.UpdateInformation();
+                return _information;
+            }
+        }
+        public BacpacStatus Status
+        {
+            get
+            {
+                this.UpdateStatus();
+                return _status;
+            }
+        }
+
+        public Bacpac UpdatePassword()
+        {
+            var request = this.CreateCommand<CommandBacpacRetrievePassword>();
             var response = request.Send();
 
             var length = response.RawResponse[1];
             this.Password = Encoding.UTF8.GetString(response.RawResponse, 2, length);
+
+            return this;
         }
 
-        public void UpdateStatus()
+        private void UpdateStatus()
         {
             var request = this.CreateCommand<CommandBacpacStatus>();
             var response = request.Send();
 
             var stream = response.GetResponseStream();
-            this.Status.Update(stream);
+            this._status.Update(stream);
         }
 
-        public void UpdateInformation()
+        private void UpdateInformation()
         {
             var request = this.CreateCommand<CommandBacpacInformation>();
             var response = request.Send();
 
             var stream = response.GetResponseStream();
-            this.Information.Update(stream);
+            this._information.Update(stream);
         }
 
-        public void Shoot()
+        public Bacpac Shutter(bool open)
         {
-        }
-
-        public void Power(bool on)
-        {
-            var request = this.CreateCommand<CommandPowerUp>();
-            request.PowerUp = on;
+            var request = this.CreateCommand<CommandBacpacShutter>();
+            request.State = open;
             var response = request.Send();
+
+            this.UpdateStatus();
+            return this;
         }
 
-        private T CreateCommand<T>(string parameter = null) where T : CommandRequest
+        public Bacpac Power(bool on)
         {
-            var request = CommandRequest.Create<T>(this.Address, passPhrase: this.Password, parameter: parameter);
+            var request = this.CreateCommand<CommandBacpacPowerUp>();
+            request.State = on;
+            var response = request.Send();
+
+            this.UpdateStatus();
+            return this;
+        }
+
+        private T CreateCommand<T>(string parameter = null) where T : CommandRequest<Bacpac>
+        {
+            var request = CommandRequest<Bacpac>.Create<T>(this,this.Address, passPhrase: this.Password, parameter: parameter);
             return request;
         }
 
         private Bacpac(string address)
         {
             this.Address = address;
-            this.Information = new BacpacInformation();
-            this.Status = new BacpacStatus();
+            this._information = new BacpacInformation();
+            this._status = new BacpacStatus();
 
             this.UpdatePassword();
             this.UpdateInformation();
